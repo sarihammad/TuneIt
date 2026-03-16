@@ -1,0 +1,35 @@
+model:
+  model_name: facebook/opt-125m
+  max_length: 512
+  torch_dtype: float32
+  device_map: auto
+
+lora:
+  r: 16
+  lora_alpha: 32
+  target_modules:
+    - q_proj
+    - v_proj
+  lora_dropout: 0.05
+  bias: none
+  task_type: CAUSAL_LM
+
+training:
+  method: lora
+  output_dir: outputs
+  num_train_epochs: 3
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-4
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+  logging_steps: 10
+  eval_steps: 100
+  save_steps: 200
+  fp16: false
+  bf16: false
+  optim: adamw_torch
+  report_to: none
+  seed: 42
+  max_steps: -1
