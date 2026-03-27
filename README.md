@@ -6,9 +6,7 @@
 ![PEFT](https://img.shields.io/badge/PEFT-0.7%2B-green)
 ![License](https://img.shields.io/badge/License-Apache%202.0-lightgrey)
 
-Measures the real cost of fine-tuning efficiency: **QLoRA delivers 3.5× memory reduction** (2.1 GB → 0.6 GB) and 99.5% parameter reduction vs. full fine-tuning on `facebook/opt-125m`, accepting a 12% perplexity increase on Dolly-15k. Results are reproducible — run `make benchmark` and the comparison table fills itself.
-
-> This is a benchmark, not a tutorial. The engineering focus is on correct implementation: label masking, NF4 quantization, gradient checkpointing, paged optimizers — the details that separate functional fine-tuning from principled fine-tuning.
+Measures the real cost of fine-tuning efficiency: QLoRA delivers 3.5× memory reduction and 99.5% parameter reduction vs. full fine-tuning on `facebook/opt-125m`, accepting a 12% perplexity increase on Dolly-15k.
 
 ---
 
