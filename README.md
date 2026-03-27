@@ -8,7 +8,7 @@
 
 Measures the real cost of fine-tuning efficiency: **QLoRA delivers 3.5× memory reduction** (2.1 GB → 0.6 GB) and 99.5% parameter reduction vs. full fine-tuning on `facebook/opt-125m`, accepting a 12% perplexity increase on Dolly-15k. Results are reproducible — run `make benchmark` and the comparison table fills itself.
 
-> This is a benchmark, not a tutorial. The engineering focus is on correct implementation of label masking, NF4 quantization, gradient checkpointing, and paged optimizers — the details that separate functional fine-tuning from principled fine-tuning.
+> This is a benchmark, not a tutorial. The engineering focus is on correct implementation: label masking, NF4 quantization, gradient checkpointing, paged optimizers — the details that separate functional fine-tuning from principled fine-tuning.
 
 ---
 
@@ -54,7 +54,6 @@ graph TD
 
 † Counted against quantized base. Full-precision equivalent is ~1.2M.
 
-**Key takeaways:**
 - LoRA: 95% of full FT ROUGE-L, 0.63% of parameters, 2.3× less memory.
 - QLoRA: 91% of full FT ROUGE-L, 3.5× less memory — enabling larger models on the same GPU.
 - At 100 steps the perplexity gap narrows significantly with more training; this is a cost benchmark, not a quality ceiling.
@@ -65,17 +64,13 @@ Results saved to `results/comparison_<timestamp>.csv` and `results/comparison_<t
 
 ## Key Design Decisions
 
-**Why NF4 quantization?**
-Pre-trained LLM weights are empirically normally distributed (weight decay during pre-training drives this). INT4 assumes a uniform distribution and wastes representational capacity on outlier values that almost never appear. NF4 allocates quantization levels to match the actual weight distribution, minimizing reconstruction error for the same bit budget. Double quantization further quantizes the quantization constants themselves (normally FP32), saving ~0.4 bits per parameter with negligible accuracy impact.
+**NF4 quantization:** Pre-trained LLM weights are empirically normally distributed. NF4 allocates quantization levels to match the actual weight distribution — lower reconstruction error than INT4 at the same bit budget. Double quantization further quantizes the quantization constants, saving ~0.4 bits/param.
 
-**Why mask instruction tokens in the loss?**
-Computing loss on the full prompt trains the model to predict instruction tokens — conflating prompt-format memorization with response-generation learning. Setting instruction token labels to `-100` means only response tokens contribute to the gradient. This is the correct interpretation of the Alpaca and Dolly training recipes. Most tutorial implementations compute loss on the full sequence; the difference is measurable in perplexity and response quality.
+**Label masking on instruction tokens:** Loss computed only on response tokens (instruction tokens → `-100`). Computing loss on the full prompt conflates prompt memorization with response generation. Measurable difference in perplexity and response quality.
 
-**Why Paged AdamW?**
-Optimizer states (momentum + variance in AdamW) consume 2× the parameter memory in FP32. Paged AdamW offloads optimizer state pages to CPU RAM during GPU memory pressure spikes. For opt-125m the gain is modest; for a 7B model it determines whether the run fits on the GPU. The pattern is included because it scales.
+**Paged AdamW:** Offloads optimizer state pages to CPU during GPU memory pressure spikes. Modest gain on opt-125m; determines GPU fit for 7B+ models. Included because it scales.
 
-**Why different target modules for LoRA vs QLoRA?**
-The original LoRA paper used `[q_proj, v_proj]` — the minimal intervention. The QLoRA paper showed `[q_proj, k_proj, v_proj, o_proj]` compensates for representation capacity lost to 4-bit quantization. `lora.yaml` uses the narrow set; `qlora.yaml` uses all four.
+**Target modules: LoRA uses `[q_proj, v_proj]`, QLoRA uses all four attention projections:** QLoRA compensates for capacity lost to 4-bit quantization by targeting more layers — consistent with the original QLoRA paper.
 
 ---
 
